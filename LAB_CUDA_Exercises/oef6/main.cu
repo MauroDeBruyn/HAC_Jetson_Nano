@@ -15,8 +15,8 @@ void imageProcessingKernel(int *image, int width, int height)
     
     if (x < width && y < height) {
         int index = y * width + x;
-        // Simulated image processing task: setting pixel value to 1
-        image[index] = 1;
+        // Simulated image processing task: setting pixel value to (streamID + 1)
+        image[index] = blockIdx.z + 1;
     }
 }
 
@@ -40,7 +40,7 @@ int main()
     }
     
     dim3 blockSize(16, 16);
-    dim3 gridSize((WIDTH + blockSize.x - 1) / blockSize.x, (HEIGHT + blockSize.y - 1) / blockSize.y);
+    dim3 gridSize((WIDTH + blockSize.x - 1) / blockSize.x, (HEIGHT + blockSize.y - 1) / blockSize.y, NUM_STREAMS);
     
     for (int i = 0; i < NUM_STREAMS; ++i) {
         cudaMemcpyAsync(d_image[i], h_image[i], size, cudaMemcpyHostToDevice, stream[i]);
@@ -58,14 +58,16 @@ int main()
         cudaStreamSynchronize(stream[i]);
     }
     
-    // Print result (just printing non-zero elements for simplicity)
+    // Print result
     for (int i = 0; i < NUM_STREAMS; ++i) {
         printf("Stream %d:\n", i);
-        for (int j = 0; j < WIDTH * HEIGHT; ++j) {
-            if (h_image[i][j] != 0) {
-                printf("(%d, %d): %d\n", j % WIDTH, j / WIDTH, h_image[i][j]);
+        for (int y = 0; y < HEIGHT; ++y) {
+            for (int x = 0; x < WIDTH; ++x) {
+                printf("%d ", h_image[i][y * WIDTH + x]);
             }
+            printf("\n");
         }
+        printf("\n");
     }
     
     // Free memory and destroy streams
@@ -79,3 +81,4 @@ int main()
     
     return 0;
 }
+
